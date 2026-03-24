@@ -8,9 +8,11 @@ import { DownloadService } from '../../services/download.service';
   imports: [FormsModule],
   template: `
     <div class="url-input-container">
-      <div class="input-wrapper" [class.has-platform]="detectedPlatform()">
+      <!-- Main input bubble -->
+      <div class="input-bubble" [class.has-platform]="detectedPlatform()" [class.focused]="isFocused()">
         @if (detectedPlatform()) {
-          <div class="platform-badge" [style.background-color]="downloadService.getPlatformColor(detectedPlatform())">
+          <div class="platform-pill" [style.background]="downloadService.getPlatformColor(detectedPlatform()) + '22'" [style.color]="downloadService.getPlatformColor(detectedPlatform())" [style.border-color]="downloadService.getPlatformColor(detectedPlatform()) + '33'">
+            <span class="platform-dot" [style.background]="downloadService.getPlatformColor(detectedPlatform())"></span>
             {{ downloadService.getPlatformName(detectedPlatform()) }}
           </div>
         }
@@ -18,52 +20,62 @@ import { DownloadService } from '../../services/download.service';
           type="url"
           [ngModel]="url()"
           (ngModelChange)="onUrlChange($event)"
-          placeholder="Paste a video URL from YouTube, Instagram, X, LinkedIn..."
+          (focus)="isFocused.set(true)"
+          (blur)="isFocused.set(false)"
+          placeholder="Paste any video URL here..."
           [disabled]="loading()"
           (keydown.enter)="onSubmit()"
         />
         <div class="input-actions">
           @if (url()) {
-            <button class="btn-clear" (click)="clear()" title="Clear">&#x2715;</button>
+            <button class="btn-clear" (click)="clear()" title="Clear">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
           }
           <button
-            class="btn-download"
+            class="btn-go"
             (click)="onSubmit()"
             [disabled]="!url() || loading()"
           >
             @if (loading()) {
               <span class="spinner"></span>
             } @else {
-              Download
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="17" x2="15" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Download</span>
             }
           </button>
         </div>
       </div>
 
       @if (error()) {
-        <div class="error-message">{{ error() }}</div>
+        <div class="error-bubble">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3M7 9h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          {{ error() }}
+        </div>
       }
 
-      <div class="quality-options">
-        <label class="quality-option" [class.selected]="quality() === 'best'">
+      <!-- Quality picker bubbles -->
+      <div class="quality-row">
+        <label class="q-bubble" [class.active]="quality() === 'best'">
           <input type="radio" name="quality" value="best" [ngModel]="quality()" (ngModelChange)="quality.set($event)" />
           <span>Best</span>
         </label>
-        <label class="quality-option" [class.selected]="quality() === '1080p'">
+        <label class="q-bubble" [class.active]="quality() === '1080p'">
           <input type="radio" name="quality" value="1080p" [ngModel]="quality()" (ngModelChange)="quality.set($event)" />
           <span>1080p</span>
         </label>
-        <label class="quality-option" [class.selected]="quality() === '720p'">
+        <label class="q-bubble" [class.active]="quality() === '720p'">
           <input type="radio" name="quality" value="720p" [ngModel]="quality()" (ngModelChange)="quality.set($event)" />
           <span>720p</span>
         </label>
-        <label class="quality-option" [class.selected]="quality() === '480p'">
+        <label class="q-bubble" [class.active]="quality() === '480p'">
           <input type="radio" name="quality" value="480p" [ngModel]="quality()" (ngModelChange)="quality.set($event)" />
           <span>480p</span>
         </label>
-        <label class="quality-option" [class.selected]="quality() === 'audio'">
+        <label class="q-bubble" [class.active]="quality() === 'audio'">
           <input type="radio" name="quality" value="audio" [ngModel]="quality()" (ngModelChange)="quality.set($event)" />
-          <span>Audio Only</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M10 3.5c1.1.9 1.1 3.1 0 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="10" r="2" fill="currentColor"/></svg>
+          <span>Audio</span>
         </label>
       </div>
     </div>
@@ -71,49 +83,81 @@ import { DownloadService } from '../../services/download.service';
   styles: [`
     .url-input-container {
       width: 100%;
-      max-width: 700px;
+      max-width: 680px;
       margin: 0 auto;
     }
 
-    .input-wrapper {
+    /* ── Main input bubble ── */
+    .input-bubble {
       display: flex;
       align-items: center;
-      background: #1e1e2e;
-      border: 2px solid #313244;
-      border-radius: 16px;
-      padding: 6px 6px 6px 20px;
-      transition: border-color 0.2s;
-      gap: 8px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-bubble);
+      padding: 8px 8px 8px 22px;
+      gap: 10px;
+      box-shadow: var(--shadow-bubble);
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
 
-    .input-wrapper:focus-within {
-      border-color: #6366f1;
+    .input-bubble.focused {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-bubble), var(--shadow-glow);
     }
 
-    .platform-badge {
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: white;
+    .input-bubble.has-platform {
+      border-color: rgba(124, 58, 237, 0.15);
+    }
+
+    /* ── Platform detection pill ── */
+    .platform-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 0.72rem;
+      font-weight: 700;
       white-space: nowrap;
+      flex-shrink: 0;
+      border: 1px solid;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .platform-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
+    @keyframes popIn {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Input field ── */
     input {
       flex: 1;
       background: transparent;
       border: none;
-      color: #cdd6f4;
-      font-size: 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
       outline: none;
       min-width: 0;
     }
 
     input::placeholder {
-      color: #6c7086;
+      color: var(--text-muted);
+      font-weight: 400;
     }
 
+    /* ── Action buttons ── */
     .input-actions {
       display: flex;
       align-items: center;
@@ -122,94 +166,126 @@ import { DownloadService } from '../../services/download.service';
     }
 
     .btn-clear {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
       background: transparent;
       border: none;
-      color: #6c7086;
+      color: var(--text-muted);
       cursor: pointer;
-      padding: 8px;
-      font-size: 1rem;
-      border-radius: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
     }
 
     .btn-clear:hover {
-      color: #cdd6f4;
-      background: #313244;
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    .btn-download {
-      background: #6366f1;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background 0.2s;
+    .btn-go {
       display: flex;
       align-items: center;
       gap: 8px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: white;
+      border: none;
+      padding: 12px 22px;
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+      letter-spacing: 0.01em;
     }
 
-    .btn-download:hover:not(:disabled) {
-      background: #4f46e5;
+    .btn-go:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(124, 58, 237, 0.45);
+      background: linear-gradient(135deg, #6d28d9, #9333ea);
     }
 
-    .btn-download:disabled {
-      opacity: 0.5;
+    .btn-go:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-go:disabled {
+      opacity: 0.4;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .spinner {
       width: 18px;
       height: 18px;
-      border: 2px solid transparent;
+      border: 2.5px solid rgba(255, 255, 255, 0.25);
       border-top-color: white;
       border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+      animation: spin 0.65s linear infinite;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    .error-message {
-      color: #f38ba8;
-      font-size: 0.85rem;
-      margin-top: 8px;
-      padding-left: 20px;
+    /* ── Error bubble ── */
+    .error-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      margin-left: 22px;
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      font-size: 0.82rem;
+      font-weight: 500;
+      animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .quality-options {
+    /* ── Quality picker row ── */
+    .quality-row {
       display: flex;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 16px;
       justify-content: center;
       flex-wrap: wrap;
     }
 
-    .quality-option {
+    .q-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       cursor: pointer;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      color: #a6adc8;
-      background: #1e1e2e;
-      border: 1px solid #313244;
-      transition: all 0.2s;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      transition: all 0.25s;
+      user-select: none;
 
       input { display: none; }
     }
 
-    .quality-option:hover {
-      border-color: #6366f1;
-      color: #cdd6f4;
+    .q-bubble:hover {
+      border-color: rgba(124, 58, 237, 0.25);
+      color: var(--text-primary);
+      transform: translateY(-1px);
     }
 
-    .quality-option.selected {
-      background: #6366f1;
-      border-color: #6366f1;
-      color: white;
+    .q-bubble.active {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(168, 85, 247, 0.15));
+      border-color: rgba(124, 58, 237, 0.35);
+      color: #c4b5fd;
+      box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
     }
   `]
 })
@@ -219,6 +295,7 @@ export class UrlInputComponent {
   loading = signal(false);
   error = signal('');
   detectedPlatform = signal('');
+  isFocused = signal(false);
 
   downloadRequested = output<{ url: string; quality: string }>();
 

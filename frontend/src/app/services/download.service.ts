@@ -19,11 +19,14 @@ export class DownloadService {
     return [...map.values()].filter(d => d.status === 'completed');
   });
 
-  constructor(private http: HttpClient) {
-    this.initSignalR();
-  }
+  private signalRInitialized = false;
 
-  private initSignalR(): void {
+  constructor(private http: HttpClient) {}
+
+  private async ensureSignalR(): Promise<void> {
+    if (this.signalRInitialized) return;
+    this.signalRInitialized = true;
+
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(environment.hubUrl)
       .withAutomaticReconnect()
@@ -37,7 +40,12 @@ export class DownloadService {
       });
     });
 
-    this.hubConnection.start().catch(err => console.error('SignalR connection error:', err));
+    try {
+      await this.hubConnection.start();
+    } catch (err) {
+      console.warn('SignalR connection not available — progress updates disabled:', err);
+      this.signalRInitialized = false;
+    }
   }
 
   async getMediaInfo(url: string): Promise<MediaInfo> {
@@ -45,6 +53,7 @@ export class DownloadService {
   }
 
   async startDownload(request: DownloadRequest): Promise<DownloadResponse> {
+    await this.ensureSignalR();
     const response = await this.http.post<DownloadResponse>(`${environment.apiUrl}/download/start`, request).toPromise() as DownloadResponse;
 
     // Join SignalR group for this download
